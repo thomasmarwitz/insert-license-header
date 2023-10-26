@@ -1,22 +1,18 @@
 ---
 name: CI
 
-on:  # cf. https://github.community/t/how-to-trigger-an-action-on-push-or-pull-request-but-not-both/16662
+on:
   push:
-    branches:
-      - master
-  pull_request:
-    branches:
-      - master
 
 jobs:
   check:
-    name: Run check
+    name: Unittests
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       max-parallel: 5
       matrix:
-        python-version: [3.8, 3.9, '3.10', '3.11']
+        python-version: [3.8, 3.9, "3.10", "3.11"]
         platform: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.platform }}
     steps:
@@ -34,8 +30,7 @@ jobs:
           path: |
             ~/.cache/pip
             ~/.cache/pre-commit
-          key: ${{ runner.os }}-python-${{ matrix.python-version }}-pip-${{ hashFiles('requirements.txt')
-            }}-git-${{ github.sha }}
+          key: ${{ runner.os }}-python-${{ matrix.python-version }}-pip-${{ hashFiles('requirements.txt') }}-git-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-python-${{ matrix.python-version }}-pip-${{ hashFiles('requirements.txt') }}
             ${{ runner.os }}-python-${{ matrix.python-version }}-
@@ -46,6 +41,5 @@ jobs:
           pip install --upgrade -r requirements-dev.txt
           pip install --upgrade .
 
-      - name: Running checks ☑
-        if: matrix.python-version != '3.11'  # Pylint currently triggers erroneous no-member errors
-        run: pre-commit run --all-files --verbose
+      - name: Run pytest 🧪
+        run: pytest
