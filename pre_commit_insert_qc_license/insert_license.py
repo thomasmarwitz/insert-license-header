@@ -6,7 +6,7 @@ import sys
 import subprocess
 from datetime import datetime
 from typing import Any, Sequence
-from pre_commit_hooks.default_license import DEFAULT_LICENSE
+from pre_commit_insert_qc_license.default_license import DEFAULT_LICENSE
 
 from rapidfuzz import fuzz
 

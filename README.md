@@ -11,7 +11,7 @@ If a file is not tracked by Git, the current year is used as start year.
 The end year is automatically set to the current year
 (`--use-current-year` is activated automatically when `--dynamic-years` is present).
 
-The argument `--license-filepath` can be omitted, the license header then defaults to the one specified in this repository at `pre_commit_hooks/default_license.py`.
+The argument `--license-filepath` can be omitted, the license header then defaults to the one specified in this repository at `pre_commit_insert_qc_license/default_license.py`.
 Including a LICENSE file from your local repository via `--license-filepath` overrides the default license header.
 
 Usage: (in `.pre-commit-config.yaml`)
