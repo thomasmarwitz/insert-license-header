@@ -1,6 +1,7 @@
 MIT License
 
 Copyright (c) 2019 Lucas Cimon
+Copyright (c) 2023 QuantCo
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -19,3 +20,7 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+--
+
+This has been forked from https://github.com/Lucas-C/pre-commit-hooks starting from commit 762c66ea96843b54b936fc680162ea67f85ec2d7 at Sun Aug 13 16:39:35 2023 +0200.
