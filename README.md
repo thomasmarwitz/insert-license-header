@@ -17,7 +17,7 @@ Including a LICENSE file from your local repository via `--license-filepath` ove
 Usage: (in `.pre-commit-config.yaml`)
 
 ```
-- repo: https://github.com/Quantco/pre-commmit-insert-qc-license
+- repo: https://github.com/Quantco/pre-commit-insert-qc-license
     rev: v1.7.0
     hooks:
       - id: insert-license
