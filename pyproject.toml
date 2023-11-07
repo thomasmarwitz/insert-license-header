@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=42", "wheel", "setuptools_scm[toml]>=6.0"]
+
+[tool.setuptools_scm]
+version_scheme = "post-release"
+
+
+[project]
+name = "pre-commit-insert-qc-license"
+description = "Some out-of-the-box hooks for pre-commit"
+readme = "README.md"
+dynamic = ["version"]
+authors = [
+  {name = "QuantCo, Inc.", email = "noreply@quantco.com"},
+  {name = "Lucas Cimon", email = "lucas.cimon@gmail.com"},
+]
+dependencies = [
+    "rapidfuzz"
+]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+]
+requires-python = ">=3.8"
+
+[project.urls]
+repository = "https://github.com/quantco/pre-commit-insert-qc-license"
+
+[tool.setuptools.packages.find]
+include = ["pre_commit_insert_qc_license"]
+
+[tool.setuptools.package-data]
+pre_commit_insert_qc_license = ["*.header"]
+
+[project.scripts]
+insert-license = "pre_commit_insert_qc_license.insert_license:main"

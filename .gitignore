@@ -1,5 +1,7 @@
 *.pyc
-/pre_commit_hooks.egg-info
+/pre_commit_insert_qc_license.egg-info
+dist/
+build/
 /.cache/
 /.idea/
 **/.coverage

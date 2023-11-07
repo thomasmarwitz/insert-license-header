@@ -1,8 +1,6 @@
-# Install dependencies from setup.py
--e .
-# Install development specific dependencies
 pre-commit
 pylint
 pytest
 pytest-cov
 coverage
+rapidfuzz
