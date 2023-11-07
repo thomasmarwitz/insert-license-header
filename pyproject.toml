@@ -31,7 +31,9 @@ repository = "https://github.com/quantco/pre-commit-insert-qc-license"
 
 [tool.setuptools.packages.find]
 include = ["pre_commit_insert_qc_license"]
-namespaces = false
+
+[tool.setuptools.package-data]
+pre_commit_insert_qc_license = ["*.header"]
 
 [project.scripts]
 insert-license = "pre_commit_insert_qc_license.insert_license:main"

@@ -1,6 +1,6 @@
 -   id: insert-license
     name: Insert license in comments
     description: "Insert a short license disclaimer as a header comment in source files"
-    entry: insert_license
+    entry: insert-license
     language: python
     types: [text]

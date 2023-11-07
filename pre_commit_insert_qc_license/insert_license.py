@@ -1,12 +1,13 @@
 from __future__ import annotations
+
 import argparse
 import collections
+import os
 import re
-import sys
 import subprocess
+import sys
 from datetime import datetime
 from typing import Any, Sequence
-from pre_commit_insert_qc_license.default_license import DEFAULT_LICENSE
 
 from rapidfuzz import fuzz
 
@@ -161,7 +162,8 @@ def get_license_info(args) -> LicenseInfo:
         comment_start, comment_prefix, comment_end = comment_prefix.split("|")
 
     if args.license_filepath is None:
-        plain_license = DEFAULT_LICENSE
+        current_dir = os.path.dirname(os.path.realpath(__file__))
+        plain_license = open(current_dir + "/LICENSE.header").readlines()
     else:
         with open(args.license_filepath, encoding="utf8", newline="") as license_file:
             plain_license = license_file.readlines()

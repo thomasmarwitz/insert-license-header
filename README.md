@@ -11,14 +11,15 @@ If a file is not tracked by Git, the current year is used as start year.
 The end year is automatically set to the current year
 (`--use-current-year` is activated automatically when `--dynamic-years` is present).
 
-The argument `--license-filepath` can be omitted, the license header then defaults to the one specified in this repository at `pre_commit_insert_qc_license/default_license.py`.
+The argument `--license-filepath` can be omitted, the license header then defaults to the one specified in this repository at `pre_commit_insert_qc_license/LICENSE.header`,
+this is currently set to a default QuantCo license.
 Including a LICENSE file from your local repository via `--license-filepath` overrides the default license header.
 
 Usage: (in `.pre-commit-config.yaml`)
 
 ```
-- repo: https://github.com/Quantco/pre-commmit-insert-license
-    rev: v1.7.0
+- repo: https://github.com/Quantco/pre-commit-insert-qc-license
+    rev: v1.7.1
     hooks:
       - id: insert-license
         files: \.py$
@@ -27,5 +28,13 @@ Usage: (in `.pre-commit-config.yaml`)
           - --comment-style
           - "#"
 ```
+
+Other comment styles:
+For Java / Javascript / CSS/ C / C++ (multi-line comments) set: `/*| *| */`
+For Java / Javascript / C / C++ (single line comments) set `//`
+For HTML files: `<!--|  ~|  -->`
+
+To remove all license headers, temporarily add the `--remove-header` arg in
+your `.pre-commit-config.yaml`. Run the hook on all files: `pre-commit run insert-license -a`.
 
 For more configuration options see [Lucas-C/pre-commit-hooks](https://github.com/Lucas-C/pre-commit-hooks) and [Pre-Commit](https://pre-commit.com/)
