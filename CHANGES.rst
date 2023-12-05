@@ -2,7 +2,7 @@
 Changelog
 =========
 
-Insert-license-header v1.7.2 (2023-11-07)
+Insert-license-header 1.0.0 (2023-11-07)
 ================================================
 * Tool is a standalone pypi tool and no longer a pre-commit hook
     * Rename project to `insert-license-header`
