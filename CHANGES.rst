@@ -2,6 +2,14 @@
 Changelog
 =========
 
+Insert-license-header v1.7.2 (2023-11-07)
+================================================
+* Tool is a standalone pypi tool and no longer a pre-commit hook
+    * Rename project to `insert-license-header`
+* Remove hard-coded default LICENSE.header
+* Introduce `--license-base64` flag that allows to pass a base64 encoded license instead of specifying a file path via `--license-filepath`
+
+
 Pre-commit-insert-qc-license v1.7.1 (2023-11-07)
 ================================================
 * Refactoring
