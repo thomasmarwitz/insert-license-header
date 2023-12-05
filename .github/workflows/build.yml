@@ -29,6 +29,12 @@ jobs:
         with:
           name: artifact
           path: dist/*
+      - name: Check pyproject.toml content
+        run: cat pyproject.toml
+      - name: Check current branch and commit
+        run: |
+          echo "Branch: $(git branch --show-current)"
+          echo "Commit: $(git rev-parse HEAD)"
       - uses: Quantco/ui-actions/version-metadata@v1
         id: version-metadata
         with:
