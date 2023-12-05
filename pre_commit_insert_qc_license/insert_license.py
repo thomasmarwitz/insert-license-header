@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import collections
-import os
 import re
 import subprocess
 import sys
@@ -47,7 +47,8 @@ class LicenseUpdateError(Exception):
 def main(argv=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("filenames", nargs="*", help="filenames to check")
-    parser.add_argument("--license-filepath", default=None)
+    parser.add_argument("--license-filepath", default="LICENSE.txt")
+    parser.add_argument("--license-base64")
     parser.add_argument(
         "--comment-style",
         default="#",
@@ -161,10 +162,11 @@ def get_license_info(args) -> LicenseInfo:
     if "|" in comment_prefix:
         comment_start, comment_prefix, comment_end = comment_prefix.split("|")
 
-    if args.license_filepath is None:
-        current_dir = os.path.dirname(os.path.realpath(__file__))
-        plain_license = open(current_dir + "/LICENSE.header").readlines()
-    else:
+    if args.license_base64:  # obtain plain_license by decoding base64_license string
+        decoded_license = base64.b64decode(args.license_base64).decode()
+        plain_license = [line + "\n" for line in decoded_license.splitlines()]
+
+    else:  # read plain_license from file
         with open(args.license_filepath, encoding="utf8", newline="") as license_file:
             plain_license = license_file.readlines()
 

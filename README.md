@@ -11,15 +11,17 @@ If a file is not tracked by Git, the current year is used as start year.
 The end year is automatically set to the current year
 (`--use-current-year` is activated automatically when `--dynamic-years` is present).
 
-The argument `--license-filepath` can be omitted, the license header then defaults to the one specified in this repository at `pre_commit_insert_qc_license/LICENSE.header`,
-this is currently set to a default QuantCo license.
-Including a LICENSE file from your local repository via `--license-filepath` overrides the default license header.
+Add argument `--license-base64` to include a license not via a file but through
+a `base64`` encoded string that is passed as value for this argument.
+Obtain your license `base64` encoded string with `cat LICENSE.txt | base64`.
+Including a license via `--license-base64 {base64string}` overrides the
+`--license-filepath` option.
 
 Usage: (in `.pre-commit-config.yaml`)
 
 ```
 - repo: https://github.com/Quantco/pre-commit-insert-qc-license
-    rev: v1.7.1
+    rev: v1.7.2
     hooks:
       - id: insert-license
         files: \.py$

@@ -1,17 +1,20 @@
+import shutil
+import subprocess
 from datetime import datetime
 from itertools import chain, product
-import shutil
+
 import pytest
-import subprocess
+
+from pre_commit_insert_qc_license.insert_license import (
+    LicenseInfo,
+    _get_git_file_creation_date,
+    find_license_header_index,
+)
 from pre_commit_insert_qc_license.insert_license import (
     main as insert_license,
-    _get_git_file_creation_date,
-    LicenseInfo,
 )
-from pre_commit_insert_qc_license.insert_license import find_license_header_index
 
-from .utils import chdir_to_test_resources, capture_stdout
-
+from .utils import capture_stdout, chdir_to_test_resources
 
 # pylint: disable=too-many-arguments
 
@@ -740,28 +743,29 @@ def test_dynamic_years(
         assert updated_content == expected_content
 
 
-def test_hardcoded_default_license(
-    tmpdir,
-):
+def test_base64_encoded_license(tmpdir):
+    base64_license = "Q29weXJpZ2h0IChDKSAyMDQyLCBQZWFyQ29ycCwgSW5jLgpTUERYLUxpY2Vuc2UtSWRlbnRpZmllcjogTGljZW5zZVJlZi1QZWFyQ29ycAo="
+
     with chdir_to_test_resources():
-        # This test is coupled to the hardcoded default license ("default_license.py")
-        # contained in the same directory of insert_license.py
-        # If the default license is changed, this test needs to be adjusted
         expected_content = (
-            "# Copyright (c) QuantCo {year_start}-{year_end}\n"
-            "# SPDX-License-Identifier: LicenseRef-QuantCo\n"
-            "\n"
+            "# Copyright (C) 2042, PearCorp, Inc.\n"
+            "# SPDX-License-Identifier: LicenseRef-PearCorp\n\n"
             "import sys\n"
         )
 
         temp_src_file_path = tmpdir.join("module_wo_license.py")
         shutil.copy("DY_module_wo_license.py", temp_src_file_path.strpath)
 
+        comment_style = "#"
         argv = [
+            "--license-base64",
+            base64_license,
+            "--comment-style",
+            comment_style,
             temp_src_file_path.strpath,
         ]
 
-        assert insert_license(argv) == 1  # License was inserted
+        assert insert_license(argv) == 1
 
         with open(temp_src_file_path, encoding="utf-8") as updated_file:
             updated_content = updated_file.read()
@@ -775,7 +779,7 @@ def test_file_new_to_git(monkeypatch):
             args="ls",
             returncode=0,
             stdout="",
-            stderr=""
+            stderr="",
             # simulate empty git log (== file has not been tracked by Git)
         )
 
