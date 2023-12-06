@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "insert-license-header"
 description = "Tool to insert license headers at the beginning of text-based files."
 readme = "README.md"
-version = "1.0.0"
+version = "1.0.1"
 license = "MIT"
 authors = [
   {name = "Thomas Marwitz", email = "thomasmarwitz3@gmail.com"},
