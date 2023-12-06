@@ -1,15 +1,17 @@
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["setuptools>=42", "wheel", "setuptools_scm[toml]>=6.0"]
+
+[tool.setuptools_scm]
+version_scheme = "post-release"
+
 
 [project]
-name = "insert-license-header"
-description = "Tool to insert license headers at the beginning of text-based files."
+name = "pre-commit-insert-qc-license"
+description = "Some out-of-the-box hooks for pre-commit"
 readme = "README.md"
-version = "0.0.1"
-license = "MIT"
+dynamic = ["version"]
 authors = [
-  {name = "Thomas Marwitz", email = "thomasmarwitz3@gmail.com"},
+  {name = "QuantCo, Inc.", email = "noreply@quantco.com"},
   {name = "Lucas Cimon", email = "lucas.cimon@gmail.com"},
 ]
 dependencies = [
@@ -25,12 +27,13 @@ classifiers = [
 requires-python = ">=3.8"
 
 [project.urls]
-repository = "https://github.com/insert-license-header"
+repository = "https://github.com/quantco/pre-commit-insert-qc-license"
 
-[tool.hatch.build.targets.sdist]
-include = [
-    "/insert_license_header",
-]
+[tool.setuptools.packages.find]
+include = ["pre_commit_insert_qc_license"]
+
+[tool.setuptools.package-data]
+pre_commit_insert_qc_license = ["*.header"]
 
 [project.scripts]
-insert-license = "insert_license_header.insert_license:main"
+insert-license = "pre_commit_insert_qc_license.insert_license:main"
