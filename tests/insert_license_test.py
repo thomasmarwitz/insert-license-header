@@ -5,12 +5,12 @@ from itertools import chain, product
 
 import pytest
 
-from pre_commit_insert_qc_license.insert_license import (
+from insert_license_header.insert_license import (
     LicenseInfo,
     _get_git_file_creation_date,
     find_license_header_index,
 )
-from pre_commit_insert_qc_license.insert_license import (
+from insert_license_header.insert_license import (
     main as insert_license,
 )
 
@@ -731,7 +731,7 @@ def test_dynamic_years(
         ]
 
         monkeypatch.setattr(
-            "pre_commit_insert_qc_license.insert_license._get_git_file_creation_date",
+            "insert_license_header.insert_license._get_git_file_creation_date",
             mock_get_git_file_creation_date,
         )
 

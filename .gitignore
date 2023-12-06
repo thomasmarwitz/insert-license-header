@@ -1,5 +1,5 @@
 *.pyc
-/pre_commit_insert_qc_license.egg-info
+/insert_license_header.egg-info
 dist/
 build/
 /.cache/
