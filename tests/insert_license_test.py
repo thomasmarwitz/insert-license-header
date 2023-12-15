@@ -743,6 +743,17 @@ def test_dynamic_years(
         assert updated_content == expected_content
 
 
+def test_git_file_creation_date(monkeypatch):
+    """Mock subprocess.run to throw an exception. Expect the returned datetime to have this year!"""
+
+    def mock_git_log(*args, **kwargs):
+        raise subprocess.CalledProcessError(128, "git log")
+
+    monkeypatch.setattr(subprocess, "run", mock_git_log)
+    result = _get_git_file_creation_date("Not existing")
+    assert result.year == datetime.now().year
+
+
 def test_base64_encoded_license(tmpdir):
     base64_license = "Q29weXJpZ2h0IChDKSAyMDQyLCBQZWFyQ29ycCwgSW5jLgpTUERYLUxpY2Vuc2UtSWRlbnRpZmllcjogTGljZW5zZVJlZi1QZWFyQ29ycAo="
 

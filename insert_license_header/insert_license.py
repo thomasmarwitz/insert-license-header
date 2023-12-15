@@ -740,10 +740,16 @@ def _get_git_file_creation_date(filepath):
     :return: year of creation
     :rtype: int
     """
-    command = f'git log --follow --format="%aI" -- {filepath}'
-    result = subprocess.run(
-        command, shell=True, text=True, capture_output=True, check=True
-    )
+    command = f'git log --follow --format="%aI" -- "{filepath}"'
+
+    try:
+        result = subprocess.run(
+            command, shell=True, text=True, capture_output=True, check=True
+        )
+    except (
+        subprocess.CalledProcessError
+    ):  # Cover edge cases, e.g. if there has been no commit yet
+        return datetime.now()
 
     # The result.stdout will contain all the commit dates, one per line.
     # The last line will be the date of the first commit.
