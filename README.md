@@ -16,4 +16,4 @@ Obtain your license `base64` encoded string with `cat LICENSE.txt | base64`.
 Including a license via `--license-base64 {base64string}` overrides the
 `--license-filepath` option.
 
-> :warning: This is not a pre-commit hook anymore. Instead, this repository contains just the base script to insert licenses in text-based files. To check out the resulting pre-commit hook, visit: TBA.
+> :warning: This is not a pre-commit hook anymore. Instead, this repository contains just the base script to insert licenses in text-based files. To check out the resulting pre-commit hook, visit: https://github.com/Quantco/pre-commit-insert-license)https://github.com/Quantco/pre-commit-insert-license.
