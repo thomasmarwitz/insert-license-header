@@ -2,6 +2,25 @@
 Changelog
 =========
 
+Insert-license-header 1.1.0
+================================================
+* Re-implement behaviour `--dynamic-years`
+    * The end year is now also determined by GIT, the current year is NOT automtically used.
+    * Effectively, the tool will not upgrade the year of files that have not been touched,
+      this is important when using the pre-commit hook of this tool. Prior `1.1.0`,
+      `pre-commit run insert-license -a` would cause your CI to go red after New Year's Eve.
+* Fix link to the actual pre-commit repository.
+
+Insert-license-header 1.0.2
+================================================
+* Make function that determines git start date more robust
+    * If, e.g. no GIT repository exists, the tool will no longer fail but use the current year.
+    * The path to the file is escaped, allowing for more crazy file names.
+
+Insert-license-header 1.0.1
+================================================
+* (Re-trigger publishing workflow)
+
 Insert-license-header 1.0.0 (2023-11-07)
 ================================================
 * Tool is a standalone pypi tool and no longer a pre-commit hook
