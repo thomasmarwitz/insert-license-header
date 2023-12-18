@@ -7,7 +7,7 @@ import pytest
 
 from insert_license_header.insert_license import (
     LicenseInfo,
-    _get_git_file_creation_date,
+    _get_git_file_year_range,
     find_license_header_index,
 )
 from insert_license_header.insert_license import (
@@ -683,64 +683,136 @@ def test_is_license_present(src_file_content, expected_index, match_years_strict
 
 def mock_get_git_file_creation_date(filepath):
     # Replace this with whatever behavior you want for the mock function
-    return datetime(2018, 1, 1)
+    return datetime(2018, 1, 1), datetime(2019, 1, 1)
+
+
+def get_datetime_range(year_range: str):
+    if year_range == "":
+        return None
+
+    start_year, end_year = year_range.split("-")
+    return (
+        datetime(int(start_year), 2, 2),
+        datetime(int(end_year), 2, 2),
+    )
 
 
 @pytest.mark.parametrize(
-    ("license_file_path", "src_file_path", "expected_start_year", "expect_change"),
+    ("year_range_in_file", "year_range_in_git", "current_year", "expected_year_range"),
     (
-        # Start year is determined dynamically
-        ("DY_LICENSE.txt", "DY_module_wo_license.py", "2018", 1),
-        # End year is adjusted to current_year
-        ("DY_LICENSE.txt", "DY_module_outdated_license.py", "2018", 1),
-        # Older start year is left unchanged
-        ("DY_LICENSE.txt", "DY_module_old_license.py", "2000", 1),
-        # Newer start year is left unchanged (as start year is not touched if already existing)
-        ("DY_LICENSE.txt", "DY_module_unchanged_license.py", "2022", 0),
+        ################################################################################
+        # GIT tracked: Test END_YEAR.
+        # -> GIT tracking or year in file should always have precedence over current year
+        ################################################################################
+        ("2020-2022", "2020-2023", "2024", "2020-2023"),
+        # --> Update 'end_year' if git is newer, prioritize git > current year
+        ("2020-2023", "2020-2022", "2024", "2020-2023"),
+        # --> Keep 'end_year' if git is older, prioritize 'year in file' > current year
+        ("2020-2022", "2020-2022", "2024", "2020-2022"),
+        # --> Keep 'end_year' if git and in file are same
+        # GIT tracked: Test START_YEAR
+        ("2020-2022", "2019-2022", "2024", "2020-2022"),
+        # --> Respect start year that is in the file
+        ("2020-2022", "2021-2022", "2024", "2020-2022"),
+        # --> Do not update start year if git says the file is newer
+        ("2020-2022", "2020-2022", "2024", "2020-2022"),
+        # --> Keep 'start_year' if git and in file are same
+        ################################################################################
+        # Not GIT tracked: Test END_YEAR
+        # -> Year in file should always have precedence over current year
+        ################################################################################
+        ("2020-2022", "", "2024", "2020-2022"),
+        # --> Keep 'end_year' in file although current year is newer
+        ("2020-2022", "", "2020", "2020-2022"),
+        # --> Keep 'end_year' in file although current year is older
+        ################################################################################
+        # No license header present == no year in file
+        # -> Year in git should always have precedence over current year
+        # -> Only if git is not tracked, use current year
+        ################################################################################
+        ("", "2020-2022", "2024", "2020-2022"),
+        # --> Use GIT year range although current year is newer
+        ("", "2020-2022", "2020", "2020-2022"),
+        # --> Use GIT year range although current year is older
+        ("", "", "2024", "2024-2024"),
+        # --> Use current year if not GIT tracked and no year in file
     ),
 )
-def test_dynamic_years(
-    license_file_path,
-    src_file_path,
-    expected_start_year,
-    expect_change,
+def test_dynamic_years_with_existing_license_header(
+    year_range_in_file: str,
+    year_range_in_git: str,
+    current_year: str,
+    expected_year_range: str,
     tmpdir,
-    monkeypatch,
+    monkeypatch: pytest.MonkeyPatch,
 ):
-    # Specify the paths to your license and source files
+    LICENSE_FILE = "DY_LICENSE.txt"
+    CONTENT_TEMPLATE_LICENSE_HEADER = (
+        "# Copyright (C) {year_range}, PearCorp, Inc.\n"
+        "# SPDX-License-Identifier: LicenseRef-PearCorp\n\n"
+        "import sys\n"
+    )
+    CONTENT_TEMPLATE_NO_LICENSE_HEADER = "import sys\n"
+
     with chdir_to_test_resources():
-        current_year = datetime.now().year
-
-        expected_content = (
-            f"# Copyright (C) {expected_start_year}-{current_year}, PearCorp, Inc.\n"
-            "# SPDX-License-Identifier: LicenseRef-PearCorp\n\n"
-            "import sys\n"
-        )
-
-        temp_src_file_path = tmpdir.join("module_wo_license.py")
-        shutil.copy(src_file_path, temp_src_file_path.strpath)
-
-        comment_style = "#"
-        argv = [
-            "--license-filepath",
-            license_file_path,
-            "--comment-style",
-            comment_style,
-            "--dynamic-years",
-            temp_src_file_path.strpath,
-        ]
+        temp_src_file_path = tmpdir.join("DY_module_template.py")
+        # Create file either with or without license header depending on whether
+        # year_range_in_file is given or not (empty string)
+        with open(temp_src_file_path.strpath, "w", encoding="utf-8") as f:
+            file_content = (
+                CONTENT_TEMPLATE_NO_LICENSE_HEADER
+                if year_range_in_file == ""
+                else CONTENT_TEMPLATE_LICENSE_HEADER.format(
+                    year_range=year_range_in_file
+                )
+            )
+            f.write(file_content)
 
         monkeypatch.setattr(
-            "insert_license_header.insert_license._get_git_file_creation_date",
-            mock_get_git_file_creation_date,
+            "insert_license_header.insert_license._get_git_file_year_range",
+            lambda _: get_datetime_range(year_range_in_git),
+        )
+        # mock datetime.now() to return 'current_year'
+        monkeypatch.setattr(
+            "insert_license_header.insert_license.datetime",
+            type("mock", (), {"now": lambda: datetime.strptime(current_year, "%Y")}),
         )
 
-        assert insert_license(argv) == expect_change
+        file_modified = (
+            insert_license(
+                [
+                    "--license-filepath",
+                    LICENSE_FILE,
+                    "--comment-style",
+                    "#",
+                    "--dynamic-years",
+                    temp_src_file_path.strpath,
+                ]
+            )
+            == 1  # 0 == no change, 1 == change
+        )
+
+        expect_modification = year_range_in_file != expected_year_range
+        assert file_modified == expect_modification
 
         with open(temp_src_file_path, encoding="utf-8") as updated_file:
             updated_content = updated_file.read()
 
+        expected_content = CONTENT_TEMPLATE_LICENSE_HEADER.format(
+            year_range=expected_year_range
+        )
+
         assert updated_content == expected_content
+
+
+# TESTCASES:
+# File's last_year is now 2024 (prev 2023)
+# File's last_year is still 2023 (current year = 2024)
+# File's start_year
+
+# 1. File has no license header:
+#   - Git tracked: take from git
+#   - Not Git tracked: take current-current
 
 
 def test_git_file_creation_date(monkeypatch):
@@ -750,8 +822,8 @@ def test_git_file_creation_date(monkeypatch):
         raise subprocess.CalledProcessError(128, "git log")
 
     monkeypatch.setattr(subprocess, "run", mock_git_log)
-    result = _get_git_file_creation_date("Not existing")
-    assert result.year == datetime.now().year
+    result = _get_git_file_year_range("Not existing")
+    assert result is None
 
 
 def test_base64_encoded_license(tmpdir):
@@ -795,9 +867,9 @@ def test_file_new_to_git(monkeypatch):
         )
 
     monkeypatch.setattr(subprocess, "run", mock_empty_git_log)
-    result = _get_git_file_creation_date("Test")
+    result = _get_git_file_year_range("Test")
 
-    assert result.year == datetime.now().year
+    assert result is None
 
 
 @pytest.mark.parametrize(

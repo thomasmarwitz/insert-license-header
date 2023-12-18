@@ -2,14 +2,15 @@ from __future__ import annotations
 
 import argparse
 import base64
-import collections
 import re
 import subprocess
 import sys
 from datetime import datetime
-from typing import Any, Sequence
+from typing import Any, Literal, NamedTuple, Sequence
 
 from rapidfuzz import fuzz
+
+PLACEHOLDER_END_YEAR = 1000
 
 FUZZY_MATCH_TODO_COMMENT = (
     " TODO: This license is not consistent with the license used in the project."
@@ -24,18 +25,15 @@ SKIP_LICENSE_INSERTION_COMMENT = "SKIP LICENSE INSERTION"
 
 DEBUG_LEVENSHTEIN_DISTANCE_CALCULATION = False
 
-LicenseInfo = collections.namedtuple(
-    "LicenseInfo",
-    [
-        "prefixed_license",
-        "plain_license",
-        "eol",
-        "comment_start",
-        "comment_prefix",
-        "comment_end",
-        "num_extra_lines",
-    ],
-)
+
+class LicenseInfo(NamedTuple):
+    prefixed_license: list[str]
+    plain_license: list[str]
+    eol: Literal["", "\n", "\r\n"]
+    comment_start: str
+    comment_prefix: str
+    comment_end: str
+    num_extra_lines: int
 
 
 class LicenseUpdateError(Exception):
@@ -107,14 +105,15 @@ def main(argv=None):
         help=(
             "Determine years that appear in license automatically."
             "If no start date is present in file,"
-            "use the date when the file was first introduced."
-            "Use current year automatically as end date, implies --use-current-years."
+            "use the date when the file was first introduced to GIT."
+            "Use the last commit date that affected the file as the end date."
+            "If no end date is present in file, use the current year."
         ),
     )
 
     args = parser.parse_args(argv)
     if args.dynamic_years:
-        args.use_current_year = True
+        args.allow_past_years = True
 
     if args.use_current_year:
         args.allow_past_years = True
@@ -220,11 +219,16 @@ def process_files(args, changed_files, todo_files, license_info: LicenseInfo):
     for src_filepath in args.filenames:
         license_info = plain_license_info
 
+        last_year = datetime.now().year
         if args.dynamic_years:
-            year_start = _get_git_file_creation_date(src_filepath).year
-            year_end = (
-                datetime.now().year
-            )  # args.dynamic_years implies args.use_current_year
+            year_range = _get_git_file_year_range(src_filepath)
+            year_start, year_end = (
+                (year_range[0].year, year_range[1].year)
+                if year_range is not None
+                else (datetime.now().year, PLACEHOLDER_END_YEAR)
+            )
+            last_year = year_end
+
             prefixed_license = [
                 line.format(
                     year_start=year_start,
@@ -276,12 +280,13 @@ def process_files(args, changed_files, todo_files, license_info: LicenseInfo):
             try:
                 if license_found(
                     remove_header=args.remove_header,
-                    update_year_range=args.use_current_year,
+                    update_year_range=args.use_current_year or args.dynamic_years,
                     license_header_index=license_header_index,
                     license_info=license_info,
                     src_file_content=src_file_content,
                     src_filepath=src_filepath,
                     encoding=encoding,
+                    last_year=last_year,
                 ):
                     changed_files.append(src_filepath)
             except LicenseUpdateError as error:
@@ -300,6 +305,12 @@ def process_files(args, changed_files, todo_files, license_info: LicenseInfo):
                 ):
                     todo_files.append(src_filepath)
             else:
+                # If placeholder end year is still present, replace it with current year
+                if args.dynamic_years:
+                    _replace_placeholder_in_license_with_current_year(
+                        license_info=license_info,
+                    )
+
                 if license_not_found(
                     remove_header=args.remove_header,
                     license_info=license_info,
@@ -310,6 +321,19 @@ def process_files(args, changed_files, todo_files, license_info: LicenseInfo):
                 ):
                     changed_files.append(src_filepath)
     return changed_files or todo_files or license_update_failed
+
+
+def _replace_placeholder_in_license_with_current_year(
+    license_info: LicenseInfo,
+) -> LicenseInfo:
+    current_year = datetime.now().year
+    for i in range(len(license_info.prefixed_license)):
+        line = license_info.prefixed_license[i]
+        license_info.prefixed_license[i] = re.sub(
+            r"(\d+)-" + str(PLACEHOLDER_END_YEAR),
+            r"\1-" + str(current_year),
+            line,
+        )
 
 
 def _read_file_content(src_filepath):
@@ -436,6 +460,7 @@ def try_update_year_range(
     src_filepath: str,
     license_header_index: int,
     license_length: int,
+    last_year: int,
 ) -> tuple[Sequence[str], bool]:
     """
     Updates the years in a copyright header in src_file_content by
@@ -447,11 +472,10 @@ def try_update_year_range(
     :param license_header_index: line where the license starts
     :return: source file contents and a flag indicating update
     """
-    current_year = datetime.now().year
 
     for i in range(license_header_index, license_header_index + license_length):
         updated = try_update_year(
-            src_file_content[i], src_filepath, current_year, introduce_range=True
+            src_file_content[i], src_filepath, last_year, introduce_range=True
         )
         if updated:
             src_file_content[i] = updated
@@ -467,10 +491,12 @@ def license_found(
     src_file_content,
     src_filepath,
     encoding,
+    last_year: int,
 ):  # pylint: disable=too-many-arguments
     """
-    Executed when license is found. It does nothing if remove_header is False,
-        removes the license if remove_header is True.
+    Executed when license is found. It tries to update the year range
+    if update_year_range is True, removes the license if remove_header is True.
+
     :param remove_header: whether header should be removed if found
     :param update_year_range: whether to update license with the current year
     :param license_header_index: index where license found
@@ -508,6 +534,7 @@ def license_found(
             src_filepath,
             license_header_index,
             len(license_info.prefixed_license),
+            last_year=last_year,
         )
 
     if updated:
@@ -730,10 +757,10 @@ def get_license_candidate_string(candidate_array, license_info):
     return license_string_candidate.strip(), found_license_offset
 
 
-def _get_git_file_creation_date(filepath):
-    """Uses special git log formatting to extract the years from the commits.
-    Take the year of the first commit. If the file has not been tracked with Git,
-    return the current year.
+def _get_git_file_year_range(filepath: str) -> tuple[datetime, datetime] | None:
+    """Uses git log formatting to extract start and end year from the commits.
+    Take the start year from the first commit and the end year from the last.
+    If the file has not been tracked with Git, return None.
 
     :param filepath: path to file
     :type filepath: str
@@ -749,18 +776,26 @@ def _get_git_file_creation_date(filepath):
     except (
         subprocess.CalledProcessError
     ):  # Cover edge cases, e.g. if there has been no commit yet
-        return datetime.now()
+        return None
 
     # The result.stdout will contain all the commit dates, one per line.
     # The last line will be the date of the first commit.
     dates = result.stdout.strip().split("\n")
-    first_commit_date = dates[-1]
+    first_commit_date_str = dates[-1]
+    last_commit_date_str = dates[0]
 
-    if first_commit_date == "":  # file has not been tracked with Git
-        return datetime.now()
+    if (
+        first_commit_date_str == "" or last_commit_date_str == ""
+    ):  # file has not been tracked with Git
+        return None
 
-    first_commit_date = datetime.fromisoformat(first_commit_date.replace("Z", "+00:00"))
-    return first_commit_date
+    first_commit_date = datetime.fromisoformat(
+        first_commit_date_str.replace("Z", "+00:00")
+    )
+    last_commit_date = datetime.fromisoformat(
+        last_commit_date_str.replace("Z", "+00:00")
+    )
+    return first_commit_date, last_commit_date
 
 
 if __name__ == "__main__":
