@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+import logging
 import re
 import subprocess
 import sys
@@ -9,6 +10,27 @@ from datetime import datetime
 from typing import Any, Literal, NamedTuple, Sequence
 
 from rapidfuzz import fuzz
+
+
+def configure_logging(log_to_stdout):
+    if log_to_stdout:
+        # Configure logging to output to stdout
+        logging.basicConfig(
+            level=logging.DEBUG,  # Set the logging level
+            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",  # Format of the log messages
+            handlers=[
+                logging.StreamHandler(sys.stdout)  # Output log messages to stdout
+            ],
+        )
+    else:
+        # Configure logging to suppress all logging
+        logging.basicConfig(
+            level=logging.CRITICAL + 1,  # Suppress all log messages
+            handlers=[
+                logging.NullHandler()  # Use NullHandler to handle logging requests
+            ],
+        )
+
 
 PLACEHOLDER_END_YEAR = 1000
 
@@ -110,20 +132,29 @@ def main(argv=None):
             "If no end date is present in file, use the current year."
         ),
     )
+    parser.add_argument("--debug", action="store_true", help="Enable debug mode")
 
     args = parser.parse_args(argv)
+
+    configure_logging(args.debug)
+
     if args.dynamic_years:
         args.allow_past_years = True
 
     if args.use_current_year:
         args.allow_past_years = True
 
+    logging.debug("Starting hook")
+    logging.debug(f"Arguments: {args}")
+
     license_info = get_license_info(args)
+    logging.debug(f"Retrieved license info: {license_info}")
 
     changed_files: list[str] = []
     todo_files: list[str] = []
 
     check_failed = process_files(args, changed_files, todo_files, license_info)
+    logging.debug(f"Changed files: {changed_files}\n")
 
     if check_failed:
         print("")
@@ -162,6 +193,7 @@ def get_license_info(args) -> LicenseInfo:
         comment_start, comment_prefix, comment_end = comment_prefix.split("|")
 
     if args.license_base64:  # obtain plain_license by decoding base64_license string
+        logging.debug("Decoding base64 license")
         decoded_license = base64.b64decode(args.license_base64).decode()
         plain_license = [line + "\n" for line in decoded_license.splitlines()]
 
@@ -217,17 +249,22 @@ def process_files(args, changed_files, todo_files, license_info: LicenseInfo):
     license_update_failed = False
     after_regex = args.insert_license_after_regex
     for src_filepath in args.filenames:
+        logging.debug(f"Processing file: {src_filepath}")
+
         license_info = plain_license_info
 
         last_year = datetime.now().year
         if args.dynamic_years:
             year_range = _get_git_file_year_range(src_filepath)
+            logging.debug(f"Git year range: {year_range}")
+
             year_start, year_end = (
                 (year_range[0].year, year_range[1].year)
                 if year_range is not None
                 else (datetime.now().year, PLACEHOLDER_END_YEAR)
             )
             last_year = year_end
+            logging.debug(f"Formatted year range: {year_start}-{year_end}")
 
             prefixed_license = [
                 line.format(
@@ -246,6 +283,7 @@ def process_files(args, changed_files, todo_files, license_info: LicenseInfo):
                 license_info.comment_end,
                 license_info.num_extra_lines,
             )
+            logging.debug(f"Updated license info: {license_info}")
 
         src_file_content, encoding = _read_file_content(src_filepath)
         if skip_license_insert_found(
@@ -288,6 +326,7 @@ def process_files(args, changed_files, todo_files, license_info: LicenseInfo):
                     encoding=encoding,
                     last_year=last_year,
                 ):
+                    logging.debug(f"License found in {src_filepath}, updating...")
                     changed_files.append(src_filepath)
             except LicenseUpdateError as error:
                 print(error)
@@ -307,9 +346,11 @@ def process_files(args, changed_files, todo_files, license_info: LicenseInfo):
             else:
                 # If placeholder end year is still present, replace it with current year
                 if args.dynamic_years:
+                    logging.debug("Trying to replace placeholder end year")
                     _replace_placeholder_in_license_with_current_year(
                         license_info=license_info,
                     )
+                    logging.debug(f"Updated license info: {license_info}")
 
                 if license_not_found(
                     remove_header=args.remove_header,
@@ -319,6 +360,7 @@ def process_files(args, changed_files, todo_files, license_info: LicenseInfo):
                     encoding=encoding,
                     after_regex=after_regex,
                 ):
+                    logging.debug(f"License not found in {src_filepath}, inserting...")
                     changed_files.append(src_filepath)
     return changed_files or todo_files or license_update_failed
 
@@ -536,6 +578,8 @@ def license_found(
             len(license_info.prefixed_license),
             last_year=last_year,
         )
+        if updated:
+            logging.debug(f"Updated year range: {src_file_content[:5]}")
 
     if updated:
         with open(src_filepath, "w", encoding=encoding, newline="") as src_file:
