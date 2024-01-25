@@ -4,7 +4,6 @@ from datetime import datetime
 from itertools import chain, product
 
 import pytest
-
 from insert_license_header.insert_license import (
     LicenseInfo,
     _get_git_file_year_range,
@@ -704,8 +703,10 @@ def get_datetime_range(year_range: str):
         # GIT tracked: Test END_YEAR.
         # -> GIT tracking or year in file should always have precedence over current year
         ################################################################################
-        ("2020-2022", "2020-2023", "2024", "2020-2023"),
-        # --> Update 'end_year' if git is newer, prioritize git > current year
+        ("2020-2022", "2020-2023", "2024", "2020-2024"),
+        # --> Update 'end_year' if git is newer, prioritize current year
+        # Because otherwise, the updated file would be modified, i.e. git end year is
+        # now also current year.
         ("2020-2023", "2020-2022", "2024", "2020-2023"),
         # --> Keep 'end_year' if git is older, prioritize 'year in file' > current year
         ("2020-2022", "2020-2022", "2024", "2020-2022"),
