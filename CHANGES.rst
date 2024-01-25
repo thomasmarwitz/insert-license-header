@@ -2,9 +2,14 @@
 Changelog
 =========
 
+
+Insert-license-header 1.3.0
+================================================
+* Fix issue #9: Avoid needing to re-run insert-license-header tool in cases where a
+  modification would lead to a newer git end year that is not yet present in the file.
+* Detect whether in a shallow git repo, if yes, don't trust GIT
 * Remove verbose output logs
-* In certain circumstances, insert-license would need to be run twice to update its year
-* Detect whether in a shallow environment
+
 
 Insert-license-header 1.2.0
 ================================================
