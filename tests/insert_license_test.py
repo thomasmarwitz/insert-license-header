@@ -4,7 +4,6 @@ from datetime import datetime
 from itertools import chain, product
 
 import pytest
-
 from insert_license_header.insert_license import (
     LicenseInfo,
     _get_git_file_year_range,
@@ -704,8 +703,10 @@ def get_datetime_range(year_range: str):
         # GIT tracked: Test END_YEAR.
         # -> GIT tracking or year in file should always have precedence over current year
         ################################################################################
-        ("2020-2022", "2020-2023", "2024", "2020-2023"),
-        # --> Update 'end_year' if git is newer, prioritize git > current year
+        ("2020-2022", "2020-2023", "2024", "2020-2024"),
+        # --> Update 'end_year' if git is newer, prioritize current year
+        # Because otherwise, the updated file would be modified, i.e. git end year is
+        # now also current year.
         ("2020-2023", "2020-2022", "2024", "2020-2023"),
         # --> Keep 'end_year' if git is older, prioritize 'year in file' > current year
         ("2020-2022", "2020-2022", "2024", "2020-2022"),
@@ -805,14 +806,21 @@ def test_dynamic_years_with_existing_license_header(
         assert updated_content == expected_content
 
 
-# TESTCASES:
-# File's last_year is now 2024 (prev 2023)
-# File's last_year is still 2023 (current year = 2024)
-# File's start_year
+def test_git_ignored_in_shallow_repo(monkeypatch, tmp_path):
+    """Mock subprocess.run to throw an exception. Expect the returned datetime to have this year!"""
 
-# 1. File has no license header:
-#   - Git tracked: take from git
-#   - Not Git tracked: take current-current
+    def mock_shallow_test(cmd, **kwargs):
+        assert "git rev-parse --is-shallow-repository" in cmd
+        return type("mock", (), {"stdout": "true"})
+
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        mock_shallow_test,
+    )
+
+    result = _get_git_file_year_range("some-non-existant-file.py")
+    assert result is None
 
 
 def test_git_file_creation_date(monkeypatch):

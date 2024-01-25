@@ -157,18 +157,6 @@ def main(argv=None):
     logging.debug(f"Changed files: {changed_files}\n")
 
     if check_failed:
-        print("")
-        if changed_files:
-            print(f"Some sources were modified by the hook {changed_files}")
-        if todo_files:
-            print(
-                f"Some sources contain TODO about inconsistent licenses: {todo_files}"
-            )
-        print("Now aborting the commit.")
-        print(
-            'You should check the changes made. Then simply "git add --update ." and re-commit'
-        )
-        print("")
         return 1
     return 0
 
@@ -253,23 +241,45 @@ def process_files(args, changed_files, todo_files, license_info: LicenseInfo):
 
         license_info = plain_license_info
 
-        last_year = datetime.now().year
+        current_end_year = datetime.now().year
+        logging.debug(f"Current end year: {current_end_year}")
         if args.dynamic_years:
-            year_range = _get_git_file_year_range(src_filepath)
-            logging.debug(f"Git year range: {year_range}")
-
-            year_start, year_end = (
-                (year_range[0].year, year_range[1].year)
-                if year_range is not None
+            existing_year_range = _get_existing_year_range(src_filepath)
+            logging.debug(f"Existing year range: {existing_year_range}")
+            git_year_range = _get_git_file_year_range(src_filepath)
+            logging.debug(f"Git year range: {git_year_range}")
+            git_year_start, git_year_end = (
+                (git_year_range[0].year, git_year_range[1].year)
+                if git_year_range is not None
                 else (datetime.now().year, PLACEHOLDER_END_YEAR)
             )
-            last_year = year_end
-            logging.debug(f"Formatted year range: {year_start}-{year_end}")
+
+            PREFER_GIT_OVER_CURRENT_YEAR = True
+
+            if existing_year_range is not None:
+                _, existing_year_end = existing_year_range
+                if existing_year_end < git_year_end and git_year_end < current_end_year:
+                    # If the existing year range is smaller than the git year range,
+                    # this would lead to an update of the existing year range.
+                    # If the git year range is smaller than the current year,
+                    # this would lead to a subsequent update being necessary once
+                    # the changes are committed. `insert-license` would have
+                    # to be run again.
+                    PREFER_GIT_OVER_CURRENT_YEAR = False
+                    logging.debug(
+                        "Existing year range is smaller than git year range."
+                        "Git year range is smaller than current year."
+                        "Setting 'PREFER_GIT_OVER_CURRENT_YEAR = False'."
+                    )
+
+            current_end_year = (
+                git_year_end if PREFER_GIT_OVER_CURRENT_YEAR else current_end_year
+            )
 
             prefixed_license = [
                 line.format(
-                    year_start=year_start,
-                    year_end=year_end,
+                    year_start=git_year_start,
+                    year_end=git_year_end,
                 )  # this assumes '{year_start}' and '{year_end}' appear in your license
                 for line in license_info.prefixed_license
             ]
@@ -324,7 +334,7 @@ def process_files(args, changed_files, todo_files, license_info: LicenseInfo):
                     src_file_content=src_file_content,
                     src_filepath=src_filepath,
                     encoding=encoding,
-                    last_year=last_year,
+                    last_year=current_end_year,
                 ):
                     logging.debug(f"License found in {src_filepath}, updating...")
                     changed_files.append(src_filepath)
@@ -801,6 +811,49 @@ def get_license_candidate_string(candidate_array, license_info):
     return license_string_candidate.strip(), found_license_offset
 
 
+def _get_existing_year_range(filepath: str) -> tuple[int, int] | None:
+    """Uses regex to extract start and end year from the license header.
+    Take the start year from the first year and the end year from the last.
+    If the file has no license header, return None.
+
+    :param filepath: path to file
+    :type filepath: str
+    :return: year of creation
+    :rtype: int
+    """
+
+    with open(filepath, encoding="utf8", newline="") as src_file:
+        src_file_content = src_file.readlines()
+
+    for line in src_file_content:
+        matches = _YEAR_RANGE_PATTERN.findall(line)
+        if matches:
+            match = matches[0]
+            start_year = int(match[:4])
+            end_year = match[5:].lstrip(" -,")
+            if end_year:
+                return start_year, int(end_year)
+            return start_year, PLACEHOLDER_END_YEAR
+
+    return None  # File exists but no license header found
+
+
+def _is_shallow_git_repo() -> bool:
+    """Check if the current directory is a shallow git repo.
+    If it is, we cannot use git log to get the year range of the file.
+    """
+    command = "git rev-parse --is-shallow-repository"
+
+    try:
+        result = subprocess.run(
+            command, shell=True, text=True, capture_output=True, check=True
+        )
+    except subprocess.CalledProcessError:
+        return False
+
+    return result.stdout.strip() == "true"
+
+
 def _get_git_file_year_range(filepath: str) -> tuple[datetime, datetime] | None:
     """Uses git log formatting to extract start and end year from the commits.
     Take the start year from the first commit and the end year from the last.
@@ -812,6 +865,12 @@ def _get_git_file_year_range(filepath: str) -> tuple[datetime, datetime] | None:
     :rtype: int
     """
     command = f'git log --follow --format="%aI" -- "{filepath}"'
+
+    if _is_shallow_git_repo():
+        # Shallow git repo, don't trust git log as the life cycle of a file
+        # may not be fully captured. In this case, just pretend the file
+        # is not tracked with Git.
+        return None
 
     try:
         result = subprocess.run(
