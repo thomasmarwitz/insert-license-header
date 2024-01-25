@@ -157,18 +157,6 @@ def main(argv=None):
     logging.debug(f"Changed files: {changed_files}\n")
 
     if check_failed:
-        print("")
-        if changed_files:
-            print(f"Some sources were modified by the hook {changed_files}")
-        if todo_files:
-            print(
-                f"Some sources contain TODO about inconsistent licenses: {todo_files}"
-            )
-        print("Now aborting the commit.")
-        print(
-            'You should check the changes made. Then simply "git add --update ." and re-commit'
-        )
-        print("")
         return 1
     return 0
 
