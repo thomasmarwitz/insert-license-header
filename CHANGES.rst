@@ -6,6 +6,11 @@ Changelog
 * In certain circumstances, insert-license would need to be run twice to update its year
 * Detect whether in a shallow environment
 
+Insert-license-header 1.2.0
+================================================
+* Added debugging functionality, can be triggered by providing `--debug`.
+
+
 Insert-license-header 1.1.0
 ================================================
 * Re-implement behaviour `--dynamic-years`

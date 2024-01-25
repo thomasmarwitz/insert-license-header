@@ -242,6 +242,7 @@ def process_files(args, changed_files, todo_files, license_info: LicenseInfo):
         license_info = plain_license_info
 
         current_end_year = datetime.now().year
+        logging.debug(f"Current end year: {current_end_year}")
         if args.dynamic_years:
             existing_year_range = _get_existing_year_range(src_filepath)
             logging.debug(f"Existing year range: {existing_year_range}")
@@ -265,6 +266,11 @@ def process_files(args, changed_files, todo_files, license_info: LicenseInfo):
                     # the changes are committed. `insert-license` would have
                     # to be run again.
                     PREFER_GIT_OVER_CURRENT_YEAR = False
+                    logging.debug(
+                        "Existing year range is smaller than git year range."
+                        "Git year range is smaller than current year."
+                        "Setting 'PREFER_GIT_OVER_CURRENT_YEAR = False'."
+                    )
 
             current_end_year = (
                 git_year_end if PREFER_GIT_OVER_CURRENT_YEAR else current_end_year
