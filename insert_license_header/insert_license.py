@@ -832,6 +832,22 @@ def _get_existing_year_range(filepath: str) -> tuple[int, int] | None:
     return None  # File exists but no license header found
 
 
+def _is_shallow_git_repo() -> bool:
+    """Check if the current directory is a shallow git repo.
+    If it is, we cannot use git log to get the year range of the file.
+    """
+    command = "git rev-parse --is-shallow-repository"
+
+    try:
+        result = subprocess.run(
+            command, shell=True, text=True, capture_output=True, check=True
+        )
+    except subprocess.CalledProcessError:
+        return False
+
+    return result.stdout.strip() == "true"
+
+
 def _get_git_file_year_range(filepath: str) -> tuple[datetime, datetime] | None:
     """Uses git log formatting to extract start and end year from the commits.
     Take the start year from the first commit and the end year from the last.
@@ -843,6 +859,12 @@ def _get_git_file_year_range(filepath: str) -> tuple[datetime, datetime] | None:
     :rtype: int
     """
     command = f'git log --follow --format="%aI" -- "{filepath}"'
+
+    if _is_shallow_git_repo():
+        # Shallow git repo, don't trust git log as the life cycle of a file
+        # may not be fully captured. In this case, just pretend the file
+        # is not tracked with Git.
+        return None
 
     try:
         result = subprocess.run(
