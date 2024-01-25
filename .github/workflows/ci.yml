@@ -19,6 +19,9 @@ jobs:
       - name: Checkout code 🛎️
         uses: actions/checkout@v3
 
+      - name: Check shallow env
+        run: git rev-parse --is-shallow-repository
+
       - name: Set up Python ${{ matrix.python-version }} 🔧
         uses: actions/setup-python@v3
         with:
